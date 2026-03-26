@@ -88,7 +88,7 @@
 
     /* ── Sticky canvas section ── */
     #scroll-section {
-      height: 500vh;
+      height: 1000vh;
       position: relative;
     }
 
@@ -105,9 +105,9 @@
     }
 
     #scroll-canvas {
-      max-width: 100%;
-      max-height: 100vh;
-      object-fit: contain;
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
     /* ── Scroll text overlays ── */
@@ -350,14 +350,27 @@
       }
     }
 
-    // ── Draw a single frame ───────────────────────────────────────────────
+    // ── Resize canvas to match viewport ──────────────────────────────────
+    function resizeCanvas() {
+      canvas.width  = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    }
+
+    window.addEventListener("resize", () => {
+      resizeCanvas();
+      renderFrame(Math.round(obj.frame));
+    });
+
+    // ── Draw a single frame (cover scaling) ──────────────────────────────
     function renderFrame(index) {
       const img = cache[currentVersion][Math.max(0, Math.min(index, TOTAL_FRAMES - 1))];
       if (!img?.complete) return;
-      canvas.width  = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
+      const cw = canvas.width, ch = canvas.height;
+      const scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
+      const x = (cw - img.naturalWidth  * scale) / 2;
+      const y = (ch - img.naturalHeight * scale) / 2;
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.drawImage(img, x, y, img.naturalWidth * scale, img.naturalHeight * scale);
     }
 
     // ── Set up / refresh GSAP ScrollTrigger ──────────────────────────────
@@ -405,6 +418,7 @@
 
     // ── Initial load ──────────────────────────────────────────────────────
     preload(1, () => {
+      resizeCanvas();
       renderFrame(0);
       initScroll();
       loadScreen.classList.add("hidden");
