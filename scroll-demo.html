@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RackIdea – Scroll Video Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d0d0d;
+      color: #fff;
+    }
+
+    /* ── Version switcher pill ── */
+    #version-switcher {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+      display: flex;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 999px;
+      padding: 4px;
+      backdrop-filter: blur(12px);
+      gap: 4px;
+    }
+
+    #version-switcher button {
+      padding: 8px 24px;
+      border: none;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: #aaa;
+    }
+
+    #version-switcher button.active {
+      background: #6c63ff;
+      color: #fff;
+    }
+
+    /* ── Loading overlay ── */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: #0d0d0d;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.4s;
+    }
+
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loader-label {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-bottom: 16px;
+    }
+
+    .loader-bar-wrap {
+      width: 240px;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .loader-bar {
+      height: 100%;
+      background: #6c63ff;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    /* ── Sticky canvas section ── */
+    #scroll-section {
+      height: 500vh;
+      position: relative;
+    }
+
+    #canvas-wrapper {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      overflow: hidden;
+    }
+
+    #scroll-canvas {
+      max-width: 100%;
+      max-height: 100vh;
+      object-fit: contain;
+    }
+
+    /* ── Scroll text overlays ── */
+    .scroll-caption {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 10;
+      max-width: 640px;
+      padding: 0 24px;
+
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .scroll-caption.visible {
+      opacity: 1;
+    }
+
+    .scroll-caption p {
+      font-size: 1.25rem;
+      font-weight: 500;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.92);
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
+    }
+
+    .scroll-caption p span {
+      color: #a29bff;
+    }
+
+    /* ── End card — RackIdea reveal ── */
+    #end-card {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(6px);
+      z-index: 20;
+      pointer-events: none;
+
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+
+    #end-card.visible {
+      opacity: 1;
+    }
+
+    #end-card .brand-name {
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: #fff;
+      line-height: 1;
+    }
+
+    #end-card .brand-name span {
+      color: #6c63ff;
+    }
+
+    #end-card .brand-tagline {
+      margin-top: 16px;
+      font-size: clamp(1rem, 2vw, 1.3rem);
+      font-weight: 400;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    #end-card .brand-divider {
+      width: 48px;
+      height: 3px;
+      background: #6c63ff;
+      border-radius: 2px;
+      margin: 20px auto;
+    }
+
+    /* ── Surrounding sections ── */
+    .section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      text-align: center;
+    }
+
+    .section h1 { font-size: 3rem; font-weight: 800; margin-bottom: 16px; }
+    .section p  { font-size: 1.2rem; color: #aaa; max-width: 560px; }
+
+    .hero-section  { background: linear-gradient(160deg, #1a0040, #0d0d0d); }
+    .after-section { background: #0d0d0d; }
+    .accent { color: #6c63ff; }
+
+    .cta-btn {
+      margin-top: 32px;
+      background: #6c63ff;
+      color: #fff;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading screen -->
+  <div id="loading-screen">
+    <p class="loader-label" id="loader-label">Loading Version A…</p>
+    <div class="loader-bar-wrap">
+      <div class="loader-bar" id="loader-bar"></div>
+    </div>
+  </div>
+
+  <!-- Version switcher -->
+  <div id="version-switcher">
+    <button id="btn-v1" class="active" onclick="switchVersion(1)">Version A</button>
+    <button id="btn-v2"                onclick="switchVersion(2)">Version B</button>
+  </div>
+
+  <!-- Intro -->
+  <section class="section hero-section">
+    <h1>Scroll to <span class="accent">Explore</span></h1>
+    <p>Keep scrolling to see the product in action. Toggle versions above to compare.</p>
+  </section>
+
+  <!-- Scroll-driven video -->
+  <div id="scroll-section">
+    <div id="canvas-wrapper">
+
+      <canvas id="scroll-canvas"></canvas>
+
+      <!-- Text captions — timed by scroll progress -->
+      <div class="scroll-caption" id="caption-1">
+        <p>Innovative <span>rack-mounting solutions</span> built for enterprise networking.</p>
+      </div>
+
+      <div class="scroll-caption" id="caption-2">
+        <p>Compatible with FortiGate, Cisco, Palo Alto, and more —<br><span>organized, protected, ready.</span></p>
+      </div>
+
+      <div class="scroll-caption" id="caption-3">
+        <p>In the hum of circuits, safety flows.<br><span>A fortress built in silence, where technology grows.</span></p>
+      </div>
+
+      <!-- End card — RackIdea logo reveal -->
+      <div id="end-card">
+        <div class="brand-name">Rack<span>Idea</span></div>
+        <div class="brand-divider"></div>
+        <div class="brand-tagline">Protect and organize your tech</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- After -->
+  <section class="section after-section">
+    <h1>Ready to <span class="accent">Rack Ideas</span>?</h1>
+    <p>Everything you just saw — that's RackIdea in action.</p>
+    <a class="cta-btn" href="index.html">Get Started</a>
+  </section>
+
+  <!-- GSAP -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+  <script>
+    gsap.registerPlugin(ScrollTrigger);
+
+    const TOTAL_FRAMES = 451;
+    const VERSIONS = {
+      1: "video/v1/frames/frame",
+      2: "video/v2/frames/frame",
+    };
+
+    const canvas     = document.getElementById("scroll-canvas");
+    const ctx        = canvas.getContext("2d");
+    const loaderBar  = document.getElementById("loader-bar");
+    const loaderLbl  = document.getElementById("loader-label");
+    const loadScreen = document.getElementById("loading-screen");
+    const endCard    = document.getElementById("end-card");
+
+    // Caption elements
+    const captions = [
+      document.getElementById("caption-1"),
+      document.getElementById("caption-2"),
+      document.getElementById("caption-3"),
+    ];
+
+    // Each caption: [showAt, hideAt]  (scroll progress 0.0 – 1.0)
+    const CAPTION_WINDOWS = [
+      [0.08, 0.30],   // caption 1: early
+      [0.38, 0.60],   // caption 2: mid
+      [0.65, 0.80],   // caption 3: late
+    ];
+
+    const END_CARD_START = 0.87; // end card fades in at 87% progress
+
+    // Cache: frames[version][index] = HTMLImageElement
+    const cache = { 1: [], 2: [] };
+
+    let currentVersion = 1;
+    let scrollTween    = null;
+    const obj          = { frame: 0 };
+
+    // ── Update captions & end card based on scroll progress ──────────────
+    function updateOverlays(progress) {
+      CAPTION_WINDOWS.forEach(([show, hide], i) => {
+        const visible = progress >= show && progress < hide;
+        captions[i].classList.toggle("visible", visible);
+      });
+
+      endCard.classList.toggle("visible", progress >= END_CARD_START);
+    }
+
+    // ── Preload frames with progress bar ─────────────────────────────────
+    function preload(version, onComplete) {
+      const path = VERSIONS[version];
+      const versionFrames = cache[version];
+      let loaded = 0;
+
+      loaderLbl.textContent = `Loading Version ${version === 1 ? "A" : "B"}…`;
+      loaderBar.style.width = "0%";
+
+      for (let i = 1; i <= TOTAL_FRAMES; i++) {
+        if (versionFrames[i - 1]?.complete) {
+          if (++loaded === TOTAL_FRAMES) onComplete();
+          continue;
+        }
+        const img = new Image();
+        const num = String(i).padStart(4, "0");
+        img.src   = `${path}${num}.jpg`;
+        img.onload = img.onerror = () => {
+          loaderBar.style.width = `${Math.round((++loaded / TOTAL_FRAMES) * 100)}%`;
+          if (loaded === TOTAL_FRAMES) onComplete();
+        };
+        versionFrames[i - 1] = img;
+      }
+    }
+
+    // ── Draw a single frame ───────────────────────────────────────────────
+    function renderFrame(index) {
+      const img = cache[currentVersion][Math.max(0, Math.min(index, TOTAL_FRAMES - 1))];
+      if (!img?.complete) return;
+      canvas.width  = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+    }
+
+    // ── Set up / refresh GSAP ScrollTrigger ──────────────────────────────
+    function initScroll() {
+      if (scrollTween) {
+        scrollTween.kill();
+        ScrollTrigger.getAll().forEach(t => t.kill());
+      }
+
+      obj.frame = 0;
+
+      scrollTween = gsap.to(obj, {
+        frame: TOTAL_FRAMES - 1,
+        snap: "frame",
+        ease: "none",
+        scrollTrigger: {
+          trigger: "#scroll-section",
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 0.5,
+          onUpdate: (self) => {
+            renderFrame(Math.round(obj.frame));
+            updateOverlays(self.progress);
+          },
+        },
+      });
+    }
+
+    // ── Switch between versions ───────────────────────────────────────────
+    function switchVersion(v) {
+      if (v === currentVersion) return;
+
+      document.getElementById("btn-v1").classList.toggle("active", v === 1);
+      document.getElementById("btn-v2").classList.toggle("active", v === 2);
+
+      loadScreen.classList.remove("hidden");
+      currentVersion = v;
+
+      preload(v, () => {
+        renderFrame(Math.round(obj.frame));
+        initScroll();
+        loadScreen.classList.add("hidden");
+      });
+    }
+
+    // ── Initial load ──────────────────────────────────────────────────────
+    preload(1, () => {
+      renderFrame(0);
+      initScroll();
+      loadScreen.classList.add("hidden");
+    });
+  </script>
+</body>
+</html>
